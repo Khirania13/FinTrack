@@ -2,76 +2,69 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>Finance Tracker</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Aesthetic Finance Tracker</title>
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <style>
     body {
-      margin: 0;
-      font-family: 'Poppins', sans-serif;
-      background: linear-gradient(135deg, #fbc2eb, #a6c1ee);
+      font-family: "Poppins", sans-serif;
+      background: linear-gradient(135deg, #dcecf6, #f6f0fa);
       color: #333;
       display: flex;
       flex-direction: column;
       align-items: center;
+      min-height: 100vh;
+      margin: 0;
       padding: 20px;
     }
-
     h1 {
+      font-size: 2.2rem;
       color: #444;
-      margin-bottom: 10px;
+      margin-bottom: 20px;
     }
-
     .card {
-      background: rgba(255, 255, 255, 0.8);
-      padding: 20px;
+      background: #fff;
       border-radius: 16px;
-      box-shadow: 0 4px 15px rgba(0,0,0,0.1);
-      margin: 10px 0;
-      width: 350px;
-      max-width: 90%;
+      padding: 20px;
+      box-shadow: 0 6px 16px rgba(0,0,0,0.1);
+      margin-bottom: 20px;
+      width: 90%;
+      max-width: 500px;
+      text-align: center;
     }
-
     input, select, button {
+      margin: 8px 0;
       padding: 10px;
-      margin: 5px 0;
-      border: none;
-      border-radius: 8px;
+      border-radius: 10px;
+      border: 1px solid #ddd;
       width: 100%;
-      font-size: 14px;
+      font-size: 1rem;
     }
-
     button {
-      background: #a6c1ee;
-      color: white;
+      background: #89cff0;
+      border: none;
       cursor: pointer;
-      font-weight: bold;
       transition: 0.3s;
     }
-    button:hover { background: #8ea8d9; }
-
-    ul {
-      list-style: none;
-      padding: 0;
-      max-height: 200px;
-      overflow-y: auto;
+    button:hover {
+      background: #66b2d9;
+      color: #fff;
     }
-
-    li {
-      padding: 8px;
-      margin: 5px 0;
-      background: rgba(255,255,255,0.6);
-      border-radius: 8px;
-      display: flex;
-      justify-content: space-between;
-      font-size: 14px;
+    .chart-container {
+      width: 100%;
+      max-width: 500px;
     }
-
-    canvas { margin-top: 15px; }
+    .reset-btn {
+      background: #f28b82;
+      color: white;
+    }
+    .reset-btn:hover {
+      background: #e57373;
+    }
   </style>
 </head>
 <body>
-  <h1>💸 Finance Tracker</h1>
-
+  <h1>Finance Tracker</h1>
   <div class="card">
     <h3>Tambah Transaksi</h3>
     <input type="text" id="desc" placeholder="Deskripsi">
@@ -81,77 +74,81 @@
       <option value="expense">Pengeluaran</option>
     </select>
     <button onclick="addTransaction()">Tambah</button>
+    <button class="reset-btn" onclick="resetData()">Reset Semua</button>
   </div>
 
   <div class="card">
     <h3>Ringkasan</h3>
-    <p>Saldo: <b id="balance">Rp 0</b></p>
-    <p>Total Pemasukan: <span id="totalIncome">Rp 0</span></p>
-    <p>Total Pengeluaran: <span id="totalExpense">Rp 0</span></p>
+    <p id="balance">Saldo: Rp 0</p>
+    <p id="income">Total Pemasukan: Rp 0</p>
+    <p id="expense">Total Pengeluaran: Rp 0</p>
   </div>
 
-  <div class="card">
-    <h3>Daftar Transaksi</h3>
-    <ul id="list"></ul>
-  </div>
-
-  <div class="card">
-    <h3>Grafik Pengeluaran</h3>
-    <canvas id="chart" width="300" height="300"></canvas>
+  <div class="chart-container">
+    <canvas id="financeChart"></canvas>
   </div>
 
   <script>
-    let transactions = JSON.parse(localStorage.getItem("transactions")) || [];
-    const list = document.getElementById("list");
-    const balanceEl = document.getElementById("balance");
-    const totalIncomeEl = document.getElementById("totalIncome");
-    const totalExpenseEl = document.getElementById("totalExpense");
-    const ctx = document.getElementById("chart").getContext("2d");
-
-    let chart = new Chart(ctx, {
-      type: "pie",
+    let transactions = [];
+    const ctx = document.getElementById('financeChart').getContext('2d');
+    const financeChart = new Chart(ctx, {
+      type: 'doughnut',
       data: {
-        labels: ["Pengeluaran"],
-        datasets: [{ data: [0], backgroundColor: ["#ff9a9e"] }]
+        labels: ['Pemasukan', 'Pengeluaran'],
+        datasets: [{
+          data: [0, 0],
+          backgroundColor: ['#81c784', '#e57373'],
+          borderWidth: 1,
+        }]
+      },
+      options: {
+        responsive: true,
+        plugins: {
+          legend: {
+            position: 'bottom',
+          }
+        }
       }
     });
-
-    function updateUI() {
-      list.innerHTML = "";
-      let income = 0, expense = 0;
-
-      transactions.forEach(t => {
-        let li = document.createElement("li");
-        li.innerHTML = `${t.desc} <b>${t.type === "income" ? "+" : "-"}Rp${t.amount}</b>`;
-        list.appendChild(li);
-        if (t.type === "income") income += t.amount;
-        else expense += t.amount;
-      });
-
-      let balance = income - expense;
-      balanceEl.textContent = "Rp " + balance.toLocaleString();
-      totalIncomeEl.textContent = "Rp " + income.toLocaleString();
-      totalExpenseEl.textContent = "Rp " + expense.toLocaleString();
-
-      chart.data.labels = ["Pengeluaran", "Sisa Saldo"];
-      chart.data.datasets[0].data = [expense, balance < 0 ? 0 : balance];
-      chart.update();
-
-      localStorage.setItem("transactions", JSON.stringify(transactions));
-    }
 
     function addTransaction() {
       const desc = document.getElementById("desc").value;
       const amount = parseInt(document.getElementById("amount").value);
       const type = document.getElementById("type").value;
-      if (!desc || !amount) return alert("Isi deskripsi dan jumlah!");
+
+      if (!desc || isNaN(amount)) {
+        alert("Mohon isi semua data!");
+        return;
+      }
+
       transactions.push({ desc, amount, type });
+      updateSummary();
       document.getElementById("desc").value = "";
       document.getElementById("amount").value = "";
-      updateUI();
     }
 
-    updateUI();
+    function updateSummary() {
+      let income = 0, expense = 0;
+      transactions.forEach(t => {
+        if (t.type === "income") income += t.amount;
+        else expense += t.amount;
+      });
+      const balance = income - expense;
+
+      document.getElementById("income").innerText = `Total Pemasukan: Rp ${income}`;
+      document.getElementById("expense").innerText = `Total Pengeluaran: Rp ${expense}`;
+      document.getElementById("balance").innerText = `Saldo: Rp ${balance}`;
+
+      financeChart.data.datasets[0].data = [income, expense];
+      financeChart.update();
+    }
+
+    function resetData() {
+      if (confirm("Apakah kamu yakin ingin mereset semua data?")) {
+        transactions = [];
+        updateSummary();
+      }
+    }
   </script>
 </body>
 </html>
