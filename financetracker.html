@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Finance Tracker</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <style>
+    body {
+      margin: 0;
+      font-family: 'Poppins', sans-serif;
+      background: linear-gradient(135deg, #fbc2eb, #a6c1ee);
+      color: #333;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 20px;
+    }
+
+    h1 {
+      color: #444;
+      margin-bottom: 10px;
+    }
+
+    .card {
+      background: rgba(255, 255, 255, 0.8);
+      padding: 20px;
+      border-radius: 16px;
+      box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+      margin: 10px 0;
+      width: 350px;
+      max-width: 90%;
+    }
+
+    input, select, button {
+      padding: 10px;
+      margin: 5px 0;
+      border: none;
+      border-radius: 8px;
+      width: 100%;
+      font-size: 14px;
+    }
+
+    button {
+      background: #a6c1ee;
+      color: white;
+      cursor: pointer;
+      font-weight: bold;
+      transition: 0.3s;
+    }
+    button:hover { background: #8ea8d9; }
+
+    ul {
+      list-style: none;
+      padding: 0;
+      max-height: 200px;
+      overflow-y: auto;
+    }
+
+    li {
+      padding: 8px;
+      margin: 5px 0;
+      background: rgba(255,255,255,0.6);
+      border-radius: 8px;
+      display: flex;
+      justify-content: space-between;
+      font-size: 14px;
+    }
+
+    canvas { margin-top: 15px; }
+  </style>
+</head>
+<body>
+  <h1>💸 Finance Tracker</h1>
+
+  <div class="card">
+    <h3>Tambah Transaksi</h3>
+    <input type="text" id="desc" placeholder="Deskripsi">
+    <input type="number" id="amount" placeholder="Jumlah (Rp)">
+    <select id="type">
+      <option value="income">Pemasukan</option>
+      <option value="expense">Pengeluaran</option>
+    </select>
+    <button onclick="addTransaction()">Tambah</button>
+  </div>
+
+  <div class="card">
+    <h3>Ringkasan</h3>
+    <p>Saldo: <b id="balance">Rp 0</b></p>
+    <p>Total Pemasukan: <span id="totalIncome">Rp 0</span></p>
+    <p>Total Pengeluaran: <span id="totalExpense">Rp 0</span></p>
+  </div>
+
+  <div class="card">
+    <h3>Daftar Transaksi</h3>
+    <ul id="list"></ul>
+  </div>
+
+  <div class="card">
+    <h3>Grafik Pengeluaran</h3>
+    <canvas id="chart" width="300" height="300"></canvas>
+  </div>
+
+  <script>
+    let transactions = JSON.parse(localStorage.getItem("transactions")) || [];
+    const list = document.getElementById("list");
+    const balanceEl = document.getElementById("balance");
+    const totalIncomeEl = document.getElementById("totalIncome");
+    const totalExpenseEl = document.getElementById("totalExpense");
+    const ctx = document.getElementById("chart").getContext("2d");
+
+    let chart = new Chart(ctx, {
+      type: "pie",
+      data: {
+        labels: ["Pengeluaran"],
+        datasets: [{ data: [0], backgroundColor: ["#ff9a9e"] }]
+      }
+    });
+
+    function updateUI() {
+      list.innerHTML = "";
+      let income = 0, expense = 0;
+
+      transactions.forEach(t => {
+        let li = document.createElement("li");
+        li.innerHTML = `${t.desc} <b>${t.type === "income" ? "+" : "-"}Rp${t.amount}</b>`;
+        list.appendChild(li);
+        if (t.type === "income") income += t.amount;
+        else expense += t.amount;
+      });
+
+      let balance = income - expense;
+      balanceEl.textContent = "Rp " + balance.toLocaleString();
+      totalIncomeEl.textContent = "Rp " + income.toLocaleString();
+      totalExpenseEl.textContent = "Rp " + expense.toLocaleString();
+
+      chart.data.labels = ["Pengeluaran", "Sisa Saldo"];
+      chart.data.datasets[0].data = [expense, balance < 0 ? 0 : balance];
+      chart.update();
+
+      localStorage.setItem("transactions", JSON.stringify(transactions));
+    }
+
+    function addTransaction() {
+      const desc = document.getElementById("desc").value;
+      const amount = parseInt(document.getElementById("amount").value);
+      const type = document.getElementById("type").value;
+      if (!desc || !amount) return alert("Isi deskripsi dan jumlah!");
+      transactions.push({ desc, amount, type });
+      document.getElementById("desc").value = "";
+      document.getElementById("amount").value = "";
+      updateUI();
+    }
+
+    updateUI();
+  </script>
+</body>
+</html>
